@@ -1,6 +1,8 @@
 # kafka-utilities
 
 # who_in_isr
+When I have under replicated partitions in my kafka cluster, this handy utility lets me know if a particular broker is at fault.
+
 Requires kafkacat, and in particular, a version that supports json output (-J)
 ```
 $ kafkacat -L -b broker.example.com  -J | who_in_isr.py
@@ -43,7 +45,7 @@ Broker -1
 ```
 How to read this:
 * For partitions with leaders on broker 1, broker 4 is missing from the ISR for all the replicas it is supposed to be part of.
-* For partitions with leaders on broker 2, broker 4 is only in 10.87% of the replicas it is supposed to be part of.
+* For partitions with leaders on broker 2, broker 4 is only in the ISR for 10.87% of the replicas it is supposed to be part of.
 
 Looking at all brokers, it is always broker 4 that is missing from ISRs. This indicates that it is likely that broker 4 is the one having problems.
 
