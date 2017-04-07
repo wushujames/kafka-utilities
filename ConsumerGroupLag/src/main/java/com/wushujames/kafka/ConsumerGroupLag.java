@@ -122,8 +122,10 @@ public class ConsumerGroupLag {
                 long committed;
                 if (offsetAndMetadata == null) {
                     // no committed offsets
+                    partitionMap.put("lag", "unknown");
 //                    System.out.println("Lag: " + (end - begin));
                 } else {
+                    partitionMap.put("lag", end - offsetAndMetadata.offset());
                     committed = offsetAndMetadata.offset();
 //                    System.out.println("Lag: " + (end-committed));
                 }
