@@ -117,16 +117,10 @@ public class ConsumerGroupLag {
                 partitionMap.put("logEndOffset", end);
                 partitionMap.put("partition", tp.partition());
                 
-
-//                System.out.println("Begin: " + begin);
-//                System.out.println("End: " + end);
-
                 if (offsetAndMetadata == null) {
                     // no committed offsets
-//                    System.out.println("Committed: unknown");
                     partitionMap.put("currentOffset", "unknown");
                 } else {
-//                    System.out.println("Committed: " + offsetAndMetadata.offset());
                     partitionMap.put("currentOffset", offsetAndMetadata.offset());
                 }
 
@@ -134,19 +128,14 @@ public class ConsumerGroupLag {
                 if (offsetAndMetadata == null) {
                     // no committed offsets
                     partitionMap.put("lag", "unknown");
-//                    System.out.println("Lag: " + (end - begin));
                 } else {
                     partitionMap.put("lag", end - offsetAndMetadata.offset());
                     committed = offsetAndMetadata.offset();
-//                    System.out.println("Lag: " + (end-committed));
                 }
                 ConsumerSummary cs = whoOwnsPartition.get(tp);
                 partitionMap.put("consumerId", cs.consumerId());
                 partitionMap.put("host", cs.host());
                 partitionMap.put("clientId", cs.clientId());
-
-//                System.out.println("");
-                
             }
             
             if (outputAsJson) {
