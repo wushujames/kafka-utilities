@@ -43,7 +43,7 @@ public class ConsumerGroupLag {
             group = line.getOptionValue("group");
         } catch (ParseException ex) {
             HelpFormatter formatter = new HelpFormatter();
-            formatter.printHelp("consumer_lag_metrics", "Consumer Lag Metrics", options, ex.toString(), true);
+            formatter.printHelp("ConsumerGroupLag", "Consumer Group Lag", options, ex.toString(), true);
             throw new RuntimeException("Invalid command line options.");
         }
         
@@ -109,8 +109,8 @@ public class ConsumerGroupLag {
                 long end = endOffsets.get(tp);
                 long begin = beginningOffsets.get(tp);
 
-                partitionMap.put("log-start-offset", begin);
-                partitionMap.put("log-end-offset", end);
+                partitionMap.put("logStartOffset", begin);
+                partitionMap.put("logEndOffset", end);
                 partitionMap.put("partition", tp.partition());
                 
 
@@ -120,10 +120,10 @@ public class ConsumerGroupLag {
                 if (offsetAndMetadata == null) {
                     // no committed offsets
 //                    System.out.println("Committed: unknown");
-                    partitionMap.put("current-offset", "unknown");
+                    partitionMap.put("currentOffset", "unknown");
                 } else {
 //                    System.out.println("Committed: " + offsetAndMetadata.offset());
-                    partitionMap.put("current-offset", offsetAndMetadata.offset());
+                    partitionMap.put("currentOffset", offsetAndMetadata.offset());
                 }
 
                 long committed;
