@@ -26,6 +26,19 @@ import kafka.admin.AdminClient.ConsumerSummary;
 
 public class ConsumerGroupLag {
 
+    static public class PartitionState {
+
+        public long logStartOffset;
+        public long logEndOffset;
+        public int partition;
+        public Object currentOffset;
+        public Object lag;
+        public String consumerId;
+        public String host;
+        public String clientId;
+
+    }
+
     public static void main(String[] args) throws JsonProcessingException {
 
         String bootstrapServer;
@@ -96,46 +109,44 @@ public class ConsumerGroupLag {
             Map<TopicPartition, Long> endOffsets = consumer.endOffsets(c);
             Map<TopicPartition, Long> beginningOffsets = consumer.beginningOffsets(c);
 
-            Map<String, Map<Integer, Map<String, Object>>> results = new HashMap<String, Map<Integer, Map<String, Object>>>();
+            Map<String, Map<Integer, PartitionState>> results = new HashMap<String, Map<Integer, PartitionState>>();
             consumer.assign(c);
             for (TopicPartition tp : c) {
 
                 if (!results.containsKey(tp.topic())) {
-                    results.put(tp.topic(), new HashMap<Integer, Map<String, Object>>());
+                    results.put(tp.topic(), new HashMap<Integer, PartitionState>());
                 }
-                Map<Integer, Map<String, Object>> topicMap = results.get(tp.topic());
+                Map<Integer, PartitionState> topicMap = results.get(tp.topic());
                 if (!topicMap.containsKey(tp.partition())) {
-                    topicMap.put(tp.partition(), new HashMap<String, Object>());
+                    topicMap.put(tp.partition(), new PartitionState());
                 }
-                Map<String, Object> partitionMap = topicMap.get(tp.partition());
+                PartitionState partitionMap = topicMap.get(tp.partition());
 
                 OffsetAndMetadata offsetAndMetadata = consumer.committed(tp);
                 long end = endOffsets.get(tp);
                 long begin = beginningOffsets.get(tp);
 
-                partitionMap.put("logStartOffset", begin);
-                partitionMap.put("logEndOffset", end);
-                partitionMap.put("partition", tp.partition());
+                partitionMap.logStartOffset = begin;
+                partitionMap.logEndOffset = end;
+                partitionMap.partition = tp.partition();
 
                 if (offsetAndMetadata == null) {
                     // no committed offsets
-                    partitionMap.put("currentOffset", "unknown");
+                    partitionMap.currentOffset = "unknown";
                 } else {
-                    partitionMap.put("currentOffset", offsetAndMetadata.offset());
+                    partitionMap.currentOffset = offsetAndMetadata.offset();
                 }
 
-                long committed;
                 if (offsetAndMetadata == null) {
                     // no committed offsets
-                    partitionMap.put("lag", "unknown");
+                    partitionMap.lag = "unknown";
                 } else {
-                    partitionMap.put("lag", end - offsetAndMetadata.offset());
-                    committed = offsetAndMetadata.offset();
+                    partitionMap.lag = end - offsetAndMetadata.offset();
                 }
                 ConsumerSummary cs = whoOwnsPartition.get(tp);
-                partitionMap.put("consumerId", cs.consumerId());
-                partitionMap.put("host", cs.host());
-                partitionMap.put("clientId", cs.clientId());
+                partitionMap.consumerId = cs.consumerId();
+                partitionMap.host = cs.host();
+                partitionMap.clientId = cs.clientId();
             }
 
             if (outputAsJson) {
@@ -146,14 +157,14 @@ public class ConsumerGroupLag {
                 System.out.format("%-30s %-30s %-10s %-15s %-15s %-15s %s", "GROUP", "TOPIC", "PARTITION", "CURRENT-OFFSET", "LOG-END-OFFSET", "LAG", "OWNER");
                 System.out.println();
                 for (String topic : results.keySet()) {
-                    Map<Integer, Map<String, Object>> partitionToAssignmentInfo = results.get(topic);
+                    Map<Integer, PartitionState> partitionToAssignmentInfo = results.get(topic);
                     for (int partition : partitionToAssignmentInfo.keySet()) {
-                        Map<String, Object> assignment = partitionToAssignmentInfo.get(partition);
-                        Object currentOffset = assignment.get("currentOffset");
-                        long logEndOffset = (long) assignment.get("logEndOffset");
-                        Object lag = assignment.get("lag");
-                        String host = (String) assignment.get("host");
-                        String clientId = (String) assignment.get("clientId");
+                        PartitionState partitionState = partitionToAssignmentInfo.get(partition);
+                        Object currentOffset = partitionState.currentOffset;
+                        long logEndOffset = partitionState.logEndOffset;
+                        Object lag = partitionState.lag;
+                        String host = partitionState.host;
+                        String clientId = partitionState.clientId;
                         System.out.format("%-30s %-30s %-10s %-15s %-15s %-15s %s_%s", group, topic, partition, currentOffset, logEndOffset, lag, clientId, host);
                         System.out.println();
                     }
