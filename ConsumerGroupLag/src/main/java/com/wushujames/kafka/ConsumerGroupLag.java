@@ -144,6 +144,23 @@ public class ConsumerGroupLag {
 //                System.out.println("");
                 
             }
+            
+            System.out.format("%-30s %-30s %-10s %-15s %-15s %-15s %s", "GROUP", "TOPIC", "PARTITION", "CURRENT-OFFSET", "LOG-END-OFFSET", "LAG", "OWNER");
+            System.out.println();
+            for (String topic : results.keySet()) {
+                Map<Integer, Map<String, Object>> partitionToAssignmentInfo = results.get(topic);
+                for (int partition : partitionToAssignmentInfo.keySet()) {
+                    Map<String, Object> assignment = partitionToAssignmentInfo.get(partition);
+                    Object currentOffset = assignment.get("currentOffset");
+                    long logEndOffset = (long) assignment.get("logEndOffset");
+                    Object lag = assignment.get("lag");
+                    String host = (String) assignment.get("host");
+                    String clientId = (String) assignment.get("clientId");
+                    System.out.format("%-30s %-30s %-10s %-15s %-15s %-15s %s_%s", group, topic, partition, currentOffset, logEndOffset, lag, clientId, host);
+                    System.out.println();
+                }
+            }
+
             ObjectMapper mapper = new ObjectMapper();
             String jsonInString = mapper.writeValueAsString(results);
             System.out.println(jsonInString);
