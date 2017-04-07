@@ -30,6 +30,7 @@ public class ConsumerGroupLag {
 
         String bootstrapServer;
         String group;
+        boolean outputAsJson = false;
         
         // parse command-line arguments to get bootstrap.servers and group.id
         Options options = new Options();
@@ -38,9 +39,12 @@ public class ConsumerGroupLag {
                     .desc("Server to connect to <host:9092>").required().build());
             options.addOption(Option.builder("g").longOpt("group").hasArg().argName("group").desc(
                     "The consumer group we wish to act on").required().build());
+            options.addOption(Option.builder("J").longOpt("json").argName("outputAsJson").desc(
+                    "Output the data as json").build());
             CommandLine line = new DefaultParser().parse(options, args);
             bootstrapServer = line.getOptionValue("bootstrap-server");
             group = line.getOptionValue("group");
+            outputAsJson = line.hasOption("json");
         } catch (ParseException ex) {
             HelpFormatter formatter = new HelpFormatter();
             formatter.printHelp("ConsumerGroupLag", "Consumer Group Lag", options, ex.toString(), true);
@@ -145,27 +149,28 @@ public class ConsumerGroupLag {
                 
             }
             
-            System.out.format("%-30s %-30s %-10s %-15s %-15s %-15s %s", "GROUP", "TOPIC", "PARTITION", "CURRENT-OFFSET", "LOG-END-OFFSET", "LAG", "OWNER");
-            System.out.println();
-            for (String topic : results.keySet()) {
-                Map<Integer, Map<String, Object>> partitionToAssignmentInfo = results.get(topic);
-                for (int partition : partitionToAssignmentInfo.keySet()) {
-                    Map<String, Object> assignment = partitionToAssignmentInfo.get(partition);
-                    Object currentOffset = assignment.get("currentOffset");
-                    long logEndOffset = (long) assignment.get("logEndOffset");
-                    Object lag = assignment.get("lag");
-                    String host = (String) assignment.get("host");
-                    String clientId = (String) assignment.get("clientId");
-                    System.out.format("%-30s %-30s %-10s %-15s %-15s %-15s %s_%s", group, topic, partition, currentOffset, logEndOffset, lag, clientId, host);
-                    System.out.println();
+            if (outputAsJson) {
+                ObjectMapper mapper = new ObjectMapper();
+                String jsonInString = mapper.writeValueAsString(results);
+                System.out.println(jsonInString);
+            } else {
+                System.out.format("%-30s %-30s %-10s %-15s %-15s %-15s %s", "GROUP", "TOPIC", "PARTITION", "CURRENT-OFFSET", "LOG-END-OFFSET", "LAG", "OWNER");
+                System.out.println();
+                for (String topic : results.keySet()) {
+                    Map<Integer, Map<String, Object>> partitionToAssignmentInfo = results.get(topic);
+                    for (int partition : partitionToAssignmentInfo.keySet()) {
+                        Map<String, Object> assignment = partitionToAssignmentInfo.get(partition);
+                        Object currentOffset = assignment.get("currentOffset");
+                        long logEndOffset = (long) assignment.get("logEndOffset");
+                        Object lag = assignment.get("lag");
+                        String host = (String) assignment.get("host");
+                        String clientId = (String) assignment.get("clientId");
+                        System.out.format("%-30s %-30s %-10s %-15s %-15s %-15s %s_%s", group, topic, partition, currentOffset, logEndOffset, lag, clientId, host);
+                        System.out.println();
+                    }
                 }
             }
-
-            ObjectMapper mapper = new ObjectMapper();
-            String jsonInString = mapper.writeValueAsString(results);
-            System.out.println(jsonInString);
             System.exit(0);
-
         }
     }
 }
