@@ -158,7 +158,7 @@ public class ConsumerGroupLag {
                 String jsonInString = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(results);
                 System.out.println(jsonInString);
             } else {
-                System.out.format("%-30s %-30s %-10s %-15s %-15s %-15s %s", "GROUP", "TOPIC", "PARTITION", "CURRENT-OFFSET", "LOG-END-OFFSET", "LAG", "OWNER");
+                System.out.format("%-30s %-30s %-10s %-15s %-15s %-15s %-30s", "GROUP", "TOPIC", "PARTITION", "CURRENT-OFFSET", "LOG-END-OFFSET", "LAG", "OWNER");
                 if (includeStartOffset) {
                     System.out.format(" %-15s", "LOG-START-OFFSET");
                 }
