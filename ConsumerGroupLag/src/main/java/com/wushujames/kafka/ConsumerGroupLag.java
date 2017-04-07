@@ -44,7 +44,8 @@ public class ConsumerGroupLag {
         String bootstrapServer;
         String group;
         boolean outputAsJson = false;
-
+        boolean includeStartOffset = false;
+        
         // parse command-line arguments to get bootstrap.servers and group.id
         Options options = new Options();
         try {
@@ -54,10 +55,13 @@ public class ConsumerGroupLag {
                     "The consumer group we wish to act on").required().build());
             options.addOption(Option.builder("J").longOpt("json").argName("outputAsJson").desc(
                     "Output the data as json").build());
+            options.addOption(Option.builder("s").longOpt("include-start-offset").argName("includeStartOffset").desc(
+                    "Include log-start-offset (the offset of the first record in a partition)").build());
             CommandLine line = new DefaultParser().parse(options, args);
             bootstrapServer = line.getOptionValue("bootstrap-server");
             group = line.getOptionValue("group");
             outputAsJson = line.hasOption("json");
+            includeStartOffset = line.hasOption("s");
         } catch (ParseException ex) {
             HelpFormatter formatter = new HelpFormatter();
             formatter.printHelp("ConsumerGroupLag", "Consumer Group Lag", options, ex.toString(), true);
@@ -155,6 +159,9 @@ public class ConsumerGroupLag {
                 System.out.println(jsonInString);
             } else {
                 System.out.format("%-30s %-30s %-10s %-15s %-15s %-15s %s", "GROUP", "TOPIC", "PARTITION", "CURRENT-OFFSET", "LOG-END-OFFSET", "LAG", "OWNER");
+                if (includeStartOffset) {
+                    System.out.format(" %-15s", "LOG-START-OFFSET");
+                }
                 System.out.println();
                 for (String topic : results.keySet()) {
                     Map<Integer, PartitionState> partitionToAssignmentInfo = results.get(topic);
@@ -166,6 +173,9 @@ public class ConsumerGroupLag {
                         String host = partitionState.host;
                         String clientId = partitionState.clientId;
                         System.out.format("%-30s %-30s %-10s %-15s %-15s %-15s %s_%s", group, topic, partition, currentOffset, logEndOffset, lag, clientId, host);
+                        if (includeStartOffset) {
+                            System.out.format(" %-15s", partitionState.logStartOffset);
+                        }
                         System.out.println();
                     }
                 }
