@@ -31,7 +31,7 @@ public class ConsumerGroupLag {
         String bootstrapServer;
         String group;
         boolean outputAsJson = false;
-        
+
         // parse command-line arguments to get bootstrap.servers and group.id
         Options options = new Options();
         try {
@@ -50,15 +50,15 @@ public class ConsumerGroupLag {
             formatter.printHelp("ConsumerGroupLag", "Consumer Group Lag", options, ex.toString(), true);
             throw new RuntimeException("Invalid command line options.");
         }
-        
-        
-        
+
+
+
         Properties props = new Properties();
         props.put("bootstrap.servers", bootstrapServer);
         props.put("key.deserializer", "org.apache.kafka.common.serialization.StringDeserializer");
         props.put("value.deserializer", "org.apache.kafka.common.serialization.StringDeserializer");
         props.put("group.id", group);
-        
+
         Properties props2 = new Properties();
         props2.put("bootstrap.servers", bootstrapServer);
         AdminClient ac = AdminClient.create(props);
@@ -75,18 +75,18 @@ public class ConsumerGroupLag {
         try (KafkaConsumer<String, String> consumer = new KafkaConsumer<>(props)) {
             Collection<TopicPartition> c = new ArrayList<TopicPartition>();
 
-            
+
             ConsumerGroupSummary summary = ac.describeConsumerGroup(group);
 
             scala.collection.immutable.List<ConsumerSummary> scalaList = summary.consumers().get();
             List<ConsumerSummary> csList = scala.collection.JavaConversions.seqAsJavaList(scalaList);
-            
+
             Map<TopicPartition, ConsumerSummary> whoOwnsPartition = new HashMap<TopicPartition, ConsumerSummary>();
-            
+
             for (ConsumerSummary cs : csList) {
                 scala.collection.immutable.List<TopicPartition> scalaAssignment = cs.assignment();
                 List<TopicPartition> assignment = scala.collection.JavaConversions.seqAsJavaList(scalaAssignment);
-                
+
                 for (TopicPartition tp : assignment) {
                     whoOwnsPartition.put(tp, cs);
                 }
@@ -95,11 +95,11 @@ public class ConsumerGroupLag {
 
             Map<TopicPartition, Long> endOffsets = consumer.endOffsets(c);
             Map<TopicPartition, Long> beginningOffsets = consumer.beginningOffsets(c);
-            
+
             Map<String, Map<Integer, Map<String, Object>>> results = new HashMap<String, Map<Integer, Map<String, Object>>>();
             consumer.assign(c);
             for (TopicPartition tp : c) {
-                
+
                 if (!results.containsKey(tp.topic())) {
                     results.put(tp.topic(), new HashMap<Integer, Map<String, Object>>());
                 }
@@ -108,7 +108,7 @@ public class ConsumerGroupLag {
                     topicMap.put(tp.partition(), new HashMap<String, Object>());
                 }
                 Map<String, Object> partitionMap = topicMap.get(tp.partition());
-                
+
                 OffsetAndMetadata offsetAndMetadata = consumer.committed(tp);
                 long end = endOffsets.get(tp);
                 long begin = beginningOffsets.get(tp);
@@ -116,7 +116,7 @@ public class ConsumerGroupLag {
                 partitionMap.put("logStartOffset", begin);
                 partitionMap.put("logEndOffset", end);
                 partitionMap.put("partition", tp.partition());
-                
+
                 if (offsetAndMetadata == null) {
                     // no committed offsets
                     partitionMap.put("currentOffset", "unknown");
@@ -137,7 +137,7 @@ public class ConsumerGroupLag {
                 partitionMap.put("host", cs.host());
                 partitionMap.put("clientId", cs.clientId());
             }
-            
+
             if (outputAsJson) {
                 ObjectMapper mapper = new ObjectMapper();
                 String jsonInString = mapper.writeValueAsString(results);
