@@ -76,9 +76,16 @@ public class ConsumerGroupLag {
 
             scala.collection.immutable.List<ConsumerSummary> scalaList = summary.consumers().get();
             List<ConsumerSummary> csList = scala.collection.JavaConversions.seqAsJavaList(scalaList);
+            
+            Map<TopicPartition, ConsumerSummary> whoOwnsPartition = new HashMap<TopicPartition, ConsumerSummary>();
+            
             for (ConsumerSummary cs : csList) {
                 scala.collection.immutable.List<TopicPartition> scalaAssignment = cs.assignment();
                 List<TopicPartition> assignment = scala.collection.JavaConversions.seqAsJavaList(scalaAssignment);
+                
+                for (TopicPartition tp : assignment) {
+                    whoOwnsPartition.put(tp, cs);
+                }
                 c.addAll(assignment);
             }
 
@@ -129,6 +136,10 @@ public class ConsumerGroupLag {
                     committed = offsetAndMetadata.offset();
 //                    System.out.println("Lag: " + (end-committed));
                 }
+                ConsumerSummary cs = whoOwnsPartition.get(tp);
+                partitionMap.put("consumerId", cs.consumerId());
+                partitionMap.put("host", cs.host());
+                partitionMap.put("clientId", cs.clientId());
 
 //                System.out.println("");
                 
