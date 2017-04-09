@@ -102,6 +102,12 @@ public class ConsumerGroupLag {
 
             ConsumerGroupSummary summary = ac.describeConsumerGroup(group);
 
+            if (summary.state().equals("Dead")) {
+                System.out.format("Consumer group %s does not exist.", group);
+                System.out.println();
+                System.exit(0);
+            }
+            
             scala.collection.immutable.List<ConsumerSummary> scalaList = summary.consumers().get();
             List<ConsumerSummary> csList = scala.collection.JavaConversions.seqAsJavaList(scalaList);
             if (csList.isEmpty()) {
