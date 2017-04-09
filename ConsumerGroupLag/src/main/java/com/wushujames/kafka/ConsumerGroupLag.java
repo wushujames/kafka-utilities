@@ -104,7 +104,12 @@ public class ConsumerGroupLag {
 
             scala.collection.immutable.List<ConsumerSummary> scalaList = summary.consumers().get();
             List<ConsumerSummary> csList = scala.collection.JavaConversions.seqAsJavaList(scalaList);
-
+            if (csList.isEmpty()) {
+                System.out.format("Consumer group %s is rebalancing.", group);
+                System.out.println();
+                System.exit(0);
+            }
+            
             Map<TopicPartition, ConsumerSummary> whoOwnsPartition = new HashMap<TopicPartition, ConsumerSummary>();
 
             for (ConsumerSummary cs : csList) {
