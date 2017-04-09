@@ -113,7 +113,7 @@ public class ConsumerGroupLag {
             if (csList.isEmpty()) {
                 System.out.format("Consumer group %s is rebalancing.", group);
                 System.out.println();
-                System.exit(0);
+                System.exit(1);
             }
             
             Map<TopicPartition, ConsumerSummary> whoOwnsPartition = new HashMap<TopicPartition, ConsumerSummary>();
