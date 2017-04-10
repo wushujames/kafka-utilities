@@ -21,6 +21,11 @@ jar {
     }
 }
 
+shadowJar {
+   baseName = 'ConsumerGroupLag'
+   version = '0.0.1'
+}
+
 repositories {
     mavenCentral()
 }
