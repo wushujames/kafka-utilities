@@ -5,12 +5,14 @@ A alternative to `kafka-consumer-groups.sh --describe` that:
 3) can also output the information as JSON (Useful for piping into scripts)
 
 Timing on a consumer group that consumes 180 partitions:
+```
 kafka-consumer-groups.sh   22 seconds
 ConsumerGroupLag            1 second
 
 Timing on a consumer group that consumes 800 partitions from a remote Kafka cluster:
 kafka-consumer-groups.sh   230 seconds
 ConsumerGroupLag             7 seconds
+```
 
 By default, it outputs in a format that is (mostly) compatible with kafka-consumer-groups.sh from Kafka 0.10.1.1
 
