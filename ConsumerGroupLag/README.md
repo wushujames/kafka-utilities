@@ -107,5 +107,5 @@ $ ./gradlew shadowJar
 BUILD SUCCESSFUL
 
 Total time: 2.494 secs
-$ java -jar ConsumerGroupLag.jar
+$ java -jar build/libs/ConsumerGroupLag-0.0.1-all.jar
 ```
