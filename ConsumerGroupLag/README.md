@@ -4,14 +4,18 @@ A alternative to `kafka-consumer-groups.sh --describe` that:
 2) works across Kafka versions (0.10.0 - 0.10.2)
 3) can also output the information as JSON (Useful for piping into scripts)
 
+Timing on a consumer group that consumes 180 partitions:
+kafka-consumer-groups.sh   22 seconds
+ConsumerGroupLag            1 second
+
 Timing on a consumer group that consumes 800 partitions from a remote Kafka cluster:
-kafka-consumer-groups.sh  128 seconds
-ConsumerGroupLag            5 seconds
+kafka-consumer-groups.sh   230 seconds
+ConsumerGroupLag             7 seconds
 
 By default, it outputs in a format that is (mostly) compatible with kafka-consumer-groups.sh from Kafka 0.10.1.1
 
 ```
-$ java -jar build/libs/ConsumerGroupLag-all.jar --bootstrap-server broker.example.com:9092 --group wushujames-1491549464
+$ java -jar ConsumerGroupLag.jar --bootstrap-server broker.example.com:9092 --group wushujames-1491549464
 GROUP                              TOPIC      PARTITION  CURRENT-OFFSET  LOG-END-OFFSET  LAG             OWNER
 wushujames-1491549464              some-topic 0          unknown         531220534       unknown         consumer-1_/192.168.1.1
 wushujames-1491549464              some-topic 1          523573472       523573472       0               consumer-1_/192.168.1.1
@@ -20,7 +24,7 @@ wushujames-1491549464              some-topic 2          521553458       5215534
 
 If you add `--include-start-offset`, it adds an additional column that shows the first offset in each partition
 ```
-$ java -jar build/libs/ConsumerGroupLag-all.jar --bootstrap-server broker.example.com:9092 --group wushujames-1491549464 --include-start-offset
+$ java -jar ConsumerGroupLag.jar --bootstrap-server broker.example.com:9092 --group wushujames-1491549464 --include-start-offset
 GROUP                              TOPIC      PARTITION  CURRENT-OFFSET  LOG-END-OFFSET  LAG             OWNER                    LOG-START-OFFSET
 wushujames-1491549464              some-topic 0          unknown         531220534       unknown         consumer-1_/192.168.1.1  0
 wushujames-1491549464              some-topic 1          523573472       523573472       0               consumer-1_/192.168.1.1  0
@@ -29,7 +33,7 @@ wushujames-1491549464              some-topic 2          521553458       5215534
 
 If you add `--json` or `-J`, it will output the information as JSON. Useful for piping into scripts.
 ```
-$ java -jar build/libs/ConsumerGroupLag-all.jar --bootstrap-server broker.example.com:9092 --group wushujames-1491549464 --json
+$ java -jar ConsumerGroupLag.jar --bootstrap-server broker.example.com:9092 --group wushujames-1491549464 --json
 {
   "some-topic" : {
     "0" : {
@@ -103,5 +107,5 @@ $ ./gradlew shadowJar
 BUILD SUCCESSFUL
 
 Total time: 2.494 secs
-$ java -jar build/libs/ConsumerGroupLag-all.jar
+$ java -jar ConsumerGroupLag.jar
 ```
