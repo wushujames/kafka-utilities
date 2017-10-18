@@ -1,7 +1,7 @@
 # ConsumerGroupLag
 A alternative to `kafka-consumer-groups.sh --describe` that:
 1) is faster
-2) works across Kafka versions (0.10.0 - 0.10.2)
+2) works across Kafka versions (tested against brokers 0.10.0.0, 0.10.1.1, 0.10.2.0, 0.11.0.1)
 3) can also output the information as JSON (Useful for piping into scripts)
 
 Timing on a consumer group that consumes 180 partitions:
@@ -109,5 +109,5 @@ $ ./gradlew shadowJar
 BUILD SUCCESSFUL
 
 Total time: 2.494 secs
-$ java -jar build/libs/ConsumerGroupLag-0.0.1-all.jar
+$ java -jar build/libs/ConsumerGroupLag-0.0.2-all.jar
 ```
