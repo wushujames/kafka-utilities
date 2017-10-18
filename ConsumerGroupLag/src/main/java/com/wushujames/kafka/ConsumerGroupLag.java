@@ -45,6 +45,7 @@ public class ConsumerGroupLag {
         String group;
         boolean outputAsJson = false;
         boolean includeStartOffset = false;
+        Long groupStabilizationTimeoutMs = 5000L;
         
         // parse command-line arguments to get bootstrap.servers and group.id
         Options options = new Options();
@@ -57,6 +58,10 @@ public class ConsumerGroupLag {
                     "Output the data as json").build());
             options.addOption(Option.builder("s").longOpt("include-start-offset").argName("includeStartOffset").desc(
                     "Include log-start-offset (the offset of the first record in a partition)").build());
+            options.addOption(Option.builder("t").longOpt("group-stabilization-timeout")
+                    .argName("groupStabilizationTimeoutMs")
+                    .desc("time (ms) to wait for the consumer group description to be avaialble (e.g. wait for a consumer group rebalance to complete)")
+                    .build());
             CommandLine line = new DefaultParser().parse(options, args);
             bootstrapServer = line.getOptionValue("bootstrap-server");
             group = line.getOptionValue("group");
@@ -100,7 +105,7 @@ public class ConsumerGroupLag {
             Collection<TopicPartition> c = new ArrayList<TopicPartition>();
 
 
-            ConsumerGroupSummary summary = ac.describeConsumerGroup(group);
+            ConsumerGroupSummary summary = ac.describeConsumerGroup(group, groupStabilizationTimeoutMs);
 
             if (summary.state().equals("Dead")) {
                 System.out.format("Consumer group %s does not exist.", group);
@@ -108,6 +113,12 @@ public class ConsumerGroupLag {
                 System.exit(1);
             }
             
+            if (!summary.state().equals("Stable")) {
+                // PreparingRebalance, AwaitingSync
+                System.err.format("Warning: Consumer group %s has state %s.", group, summary.state());
+                System.err.println();
+            }
+
             scala.collection.immutable.List<ConsumerSummary> scalaList = summary.consumers().get();
             List<ConsumerSummary> csList = scala.collection.JavaConversions.seqAsJavaList(scalaList);
             if (csList.isEmpty()) {
