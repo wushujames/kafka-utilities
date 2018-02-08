@@ -6,7 +6,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
-
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.DefaultParser;
 import org.apache.commons.cli.HelpFormatter;
@@ -106,7 +105,6 @@ public class ConsumerGroupLag {
          *   }
          * }
          */
-        try (KafkaConsumer<String, String> consumer = new KafkaConsumer<>(props)) {
             Collection<TopicPartition> c = new ArrayList<TopicPartition>();
 
 
@@ -231,6 +229,5 @@ public class ConsumerGroupLag {
                 }
             }
             System.exit(0);
-        }
     }
 }
