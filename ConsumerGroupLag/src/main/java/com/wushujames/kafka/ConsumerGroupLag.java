@@ -6,7 +6,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
-
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.DefaultParser;
 import org.apache.commons.cli.HelpFormatter;
@@ -14,15 +13,14 @@ import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
-import org.apache.kafka.clients.consumer.OffsetAndMetadata;
 import org.apache.kafka.common.TopicPartition;
-
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-
 import kafka.admin.AdminClient;
 import kafka.admin.AdminClient.ConsumerGroupSummary;
 import kafka.admin.AdminClient.ConsumerSummary;
+import org.apache.kafka.common.requests.OffsetFetchResponse.PartitionData;
+
 
 public class ConsumerGroupLag {
 
@@ -39,14 +37,16 @@ public class ConsumerGroupLag {
 
     }
 
-    public static void main(String[] args) throws JsonProcessingException {
+    public static void main(String[] args) throws JsonProcessingException, OffsetFetchException {
 
         String bootstrapServer;
         String group;
         boolean outputAsJson = false;
         boolean includeStartOffset = false;
         Long groupStabilizationTimeoutMs = 5000L;
-        
+        Long waitForResponseTime = 1000L;
+
+
         // parse command-line arguments to get bootstrap.servers and group.id
         Options options = new Options();
         try {
@@ -62,6 +62,10 @@ public class ConsumerGroupLag {
                     .argName("groupStabilizationTimeoutMs")
                     .desc("time (ms) to wait for the consumer group description to be avaialble (e.g. wait for a consumer group rebalance to complete)")
                     .build());
+            options.addOption(Option.builder("w").longOpt("response-wait-time")
+                    .argName("waitForResponseTime")
+                    .desc("time (ms) to wait for asking request response.")
+                    .build());
             CommandLine line = new DefaultParser().parse(options, args);
             bootstrapServer = line.getOptionValue("bootstrap-server");
             group = line.getOptionValue("group");
@@ -74,7 +78,6 @@ public class ConsumerGroupLag {
         }
 
 
-
         Properties props = new Properties();
         props.put("bootstrap.servers", bootstrapServer);
         props.put("key.deserializer", "org.apache.kafka.common.serialization.StringDeserializer");
@@ -84,6 +87,7 @@ public class ConsumerGroupLag {
         Properties props2 = new Properties();
         props2.put("bootstrap.servers", bootstrapServer);
         AdminClient ac = AdminClient.create(props);
+
         /*
          * {
          *   "topic-name" : {
@@ -101,7 +105,6 @@ public class ConsumerGroupLag {
          *   }
          * }
          */
-        try (KafkaConsumer<String, String> consumer = new KafkaConsumer<>(props)) {
             Collection<TopicPartition> c = new ArrayList<TopicPartition>();
 
 
@@ -112,7 +115,7 @@ public class ConsumerGroupLag {
                 System.out.println();
                 System.exit(1);
             }
-            
+
             if (!summary.state().equals("Stable")) {
                 // PreparingRebalance, AwaitingSync
                 System.err.format("Warning: Consumer group %s has state %s.", group, summary.state());
@@ -126,8 +129,9 @@ public class ConsumerGroupLag {
                 System.out.println();
                 System.exit(1);
             }
-            
+
             Map<TopicPartition, ConsumerSummary> whoOwnsPartition = new HashMap<TopicPartition, ConsumerSummary>();
+            List<String> topicNamesList = new ArrayList<String>();
 
             for (ConsumerSummary cs : csList) {
                 scala.collection.immutable.List<TopicPartition> scalaAssignment = cs.assignment();
@@ -135,15 +139,25 @@ public class ConsumerGroupLag {
 
                 for (TopicPartition tp : assignment) {
                     whoOwnsPartition.put(tp, cs);
+                    topicNamesList.add(tp.topic());
                 }
                 c.addAll(assignment);
             }
 
-            Map<TopicPartition, Long> endOffsets = consumer.endOffsets(c);
-            Map<TopicPartition, Long> beginningOffsets = consumer.beginningOffsets(c);
+            //Get Per broker topic info based on topic list
+            TopicPartitionsOffsetInfo topicPartitionsOffsetInfo = new TopicPartitionsOffsetInfo(ac);
+            topicPartitionsOffsetInfo.storeTopicPartitionPerNodeInfo(props, topicNamesList);
+
+            //Get endoffset and BeginningOffsets info for all topics
+            Map<TopicPartition, Long> endOffsets = topicPartitionsOffsetInfo.getEndOffsets();
+            Map<TopicPartition, Long> beginningOffsets = topicPartitionsOffsetInfo.getBeginningOffsets();
+
+            //Get commited offset info
+            topicPartitionsOffsetInfo.findCoordinatorNodeForGroup(group, waitForResponseTime);
+            Map<TopicPartition, PartitionData> commitedOffsets = topicPartitionsOffsetInfo.getCommitedOffsets(group, (List<TopicPartition>) c, waitForResponseTime);
 
             Map<String, Map<Integer, PartitionState>> results = new HashMap<String, Map<Integer, PartitionState>>();
-            consumer.assign(c);
+
             for (TopicPartition tp : c) {
 
                 if (!results.containsKey(tp.topic())) {
@@ -155,7 +169,12 @@ public class ConsumerGroupLag {
                 }
                 PartitionState partitionMap = topicMap.get(tp.partition());
 
-                OffsetAndMetadata offsetAndMetadata = consumer.committed(tp);
+                PartitionData topicPartitionCommitedOffset = commitedOffsets.get(tp);
+                //-1: No Info available
+                if(topicPartitionCommitedOffset.offset == -1){
+                    topicPartitionCommitedOffset = null;
+                }
+
                 long end = endOffsets.get(tp);
                 long begin = beginningOffsets.get(tp);
 
@@ -163,18 +182,18 @@ public class ConsumerGroupLag {
                 partitionMap.logEndOffset = end;
                 partitionMap.partition = tp.partition();
 
-                if (offsetAndMetadata == null) {
+                if (topicPartitionCommitedOffset == null) {
                     // no committed offsets
                     partitionMap.currentOffset = "unknown";
                 } else {
-                    partitionMap.currentOffset = offsetAndMetadata.offset();
+                    partitionMap.currentOffset = topicPartitionCommitedOffset.offset;
                 }
 
-                if (offsetAndMetadata == null) {
+                if (topicPartitionCommitedOffset == null || end == -1) {
                     // no committed offsets
                     partitionMap.lag = "unknown";
                 } else {
-                    partitionMap.lag = end - offsetAndMetadata.offset();
+                    partitionMap.lag = end - topicPartitionCommitedOffset.offset;
                 }
                 ConsumerSummary cs = whoOwnsPartition.get(tp);
                 partitionMap.consumerId = cs.consumerId();
@@ -210,6 +229,5 @@ public class ConsumerGroupLag {
                 }
             }
             System.exit(0);
-        }
     }
 }
