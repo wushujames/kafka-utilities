@@ -22,7 +22,11 @@ results = {}
 js = json.load(sys.stdin)
 
 # add all brokers to the result dict
-all_broker_ids = [ broker_info['id'] for broker_info in js['brokers']]
+all_broker_ids = set()
+for topic in js['topics']:
+    for partition_js in topic['partitions']:
+        replicas = set([ r['id'] for r in partition_js['replicas'] ])
+        all_broker_ids |= replicas
 for broker_id in all_broker_ids:
     results[broker_id] = {}
     for replica_id in all_broker_ids:
